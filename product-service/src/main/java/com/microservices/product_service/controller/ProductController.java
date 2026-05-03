@@ -56,12 +56,29 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllCategories());
     }
 
-    @Operation(summary = "Yeni kategori olustur (Admin)")
+    @Operation(summary = "ID ile kategori getir")
+    @GetMapping("/categories/{categoryId}")
+    public ResponseEntity<CategoryResponse> getCategoryById(
+            @Parameter(description = "Kategori ID") @PathVariable Long categoryId) {
+        return ResponseEntity.ok(productService.getCategoryById(categoryId));
+    }
+
+    @Operation(summary = "Yeni kategori olustur (Admin)",
+               description = "Yeni kategori ekler. Kategori adı sistemde benzersiz olmalıdır.")
     @PostMapping("/categories")
     public ResponseEntity<CategoryResponse> createCategory(
             @Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productService.createCategory(request));
+    }
+
+    @Operation(summary = "Kategori guncelle (Admin)",
+               description = "Kategori adını ve açıklamasını günceller.")
+    @PutMapping("/categories/{categoryId}")
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @Parameter(description = "Kategori ID") @PathVariable Long categoryId,
+            @Valid @RequestBody CategoryUpdateRequest request) {
+        return ResponseEntity.ok(productService.updateCategory(categoryId, request));
     }
 
     @Operation(summary = "Kategori sil (Admin)")
@@ -76,11 +93,23 @@ public class ProductController {
     // SELLER
     // -------------------------
 
-    @Operation(summary = "Yeni urun ekle (Seller)", description = "Header: X-Seller-Id gereklidir")
+    /**
+     * POST /api/products/seller
+     * Yeni ürün ekler. Ürün PENDING durumunda oluşur, admin onaylayana kadar listede çıkmaz.
+     *
+     * Kategori seçenekleri (birini gönder):
+     *   - "categoryId": 5            → Mevcut kategorinin ID'si
+     *   - "categoryName": "Elektronik" → İsimle bul (yoksa otomatik oluştur)
+     *   - İkisi de yoksa             → "Genel" kategorisine atanır
+     *
+     * sellerId: JWT içindeki X-User-Id header'ından otomatik alınır.
+     */
+    @Operation(summary = "Yeni urun ekle (Seller)",
+               description = "categoryId veya categoryName gönderilebilir; ikisi de yoksa 'Genel' kategorisine atanır")
     @PostMapping("/seller")
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductRequest request,
-            @Parameter(description = "Satici ID") @RequestHeader("X-Seller-Id") Long sellerId) {
+            @Parameter(description = "Satici ID (JWT'den)") @RequestHeader("X-Seller-Id") Long sellerId) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productService.createProduct(request, sellerId));
     }

@@ -27,7 +27,19 @@ public class ProductRequest {
 
     private String imageUrl;
 
-    @NotNull(message = "Kategori boş olamaz")
+    /**
+     * Mevcut bir kategorinin ID'si.
+     * categoryId veya categoryName'den biri gönderilmeli.
+     * İkisi de null ise ürün "Genel" kategorisine atanır.
+     */
     private Long categoryId;
+
+    /**
+     * Yeni ya da var olan kategori adı.
+     * categoryId null ise bu alan kullanılır.
+     * Büyük/küçük harf duyarsız arama yapılır; bulunamazsa otomatik oluşturulur.
+     * Örnek: "Elektronik", "Giyim", "Ev & Yaşam"
+     */
+    private String categoryName;
 }
 

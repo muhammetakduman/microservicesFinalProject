@@ -2,6 +2,7 @@ package com.microservices.product_service.service;
 
 import com.microservices.product_service.config.RabbitMQConfig;
 import com.microservices.product_service.dto.*;
+import com.microservices.product_service.entity.Category;
 import com.microservices.product_service.entity.Product;
 import com.microservices.product_service.entity.Product.ProductStatus;
 import com.microservices.product_service.event.StockDecreaseEvent;
@@ -12,6 +13,7 @@ import com.microservices.product_service.mapper.ProductMapper;
 import com.microservices.product_service.repository.CategoryRepository;
 import com.microservices.product_service.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,7 +26,10 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService {
+
+    private static final String DEFAULT_CATEGORY_NAME = "Genel";
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -60,6 +65,12 @@ public class ProductService {
                 .toList();
     }
 
+    public CategoryResponse getCategoryById(Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .map(categoryMapper::toResponse)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    }
+
     @Transactional
     public CategoryResponse createCategory(com.microservices.product_service.dto.CategoryRequest request) {
         com.microservices.product_service.entity.Category category =
@@ -67,6 +78,15 @@ public class ProductService {
                         .name(request.getName())
                         .description(request.getDescription())
                         .build();
+        return categoryMapper.toResponse(categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponse updateCategory(Long categoryId, CategoryUpdateRequest request) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+        category.setName(request.getName());
+        category.setDescription(request.getDescription());
         return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
@@ -84,8 +104,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest request, Long sellerId) {
-        var category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
+        Category category = resolveCategory(request);
 
         Product product = Product.builder()
                 .name(request.getName())
@@ -110,8 +129,7 @@ public class ProductService {
             throw new RuntimeException("Bu urunu guncelleme yetkiniz yok.");
         }
 
-        var category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
+        Category category = resolveCategory(request);
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
@@ -178,6 +196,41 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         product.setStatus(ProductStatus.REJECTED);
         return productMapper.toResponse(productRepository.save(product));
+    }
+
+    // -------------------------
+    // Yardımcı: Kategori Çözümleme
+    // -------------------------
+
+    /**
+     * Ürün isteğinden kategori belirler:
+     *  1. categoryId varsa → doğrudan DB'den al (bulamazsa hata)
+     *  2. categoryName varsa → isimle ara; yoksa otomatik oluştur
+     *  3. İkisi de yoksa → "Genel" kategorisini bul/oluştur
+     */
+    @Transactional
+    protected Category resolveCategory(ProductRequest request) {
+        // 1. categoryId öncelikli
+        if (request.getCategoryId() != null) {
+            return categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
+        }
+
+        // 2. categoryName ile bul ya da oluştur
+        String name = (request.getCategoryName() != null && !request.getCategoryName().isBlank())
+                ? request.getCategoryName().trim()
+                : DEFAULT_CATEGORY_NAME;
+
+        return categoryRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> {
+                    log.info("Yeni kategori oluşturuluyor: '{}'", name);
+                    return categoryRepository.save(
+                            Category.builder()
+                                    .name(name)
+                                    .description("Otomatik oluşturuldu")
+                                    .build()
+                    );
+                });
     }
 
     // -------------------------
