@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -72,6 +73,20 @@ public class AuthService {
     @Transactional
     public AuthResponse registerSeller(RegisterRequest request) {
         return register(request, Role.SELLER);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Kayıt — ADMIN
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Yeni admin kaydı.
+     * POST /api/auth/register/admin
+     * Bu endpoint yalnızca mevcut admin tarafından çağrılmalıdır.
+     */
+    @Transactional
+    public AuthResponse registerAdmin(RegisterRequest request) {
+        return register(request, Role.ADMIN);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -259,6 +274,88 @@ public class AuthService {
                 .userId(user.getId())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .build();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ADMIN — Kullanıcı Yönetimi
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Tüm kayıtlı kullanıcıları listeler.
+     * GET /api/auth/admin/users
+     */
+    public List<AuthUserResponse> getAllUsers() {
+        return authUserRepository.findAll()
+                .stream()
+                .map(u -> AuthUserResponse.builder()
+                        .id(u.getId())
+                        .email(u.getEmail())
+                        .role(u.getRole())
+                        .active(u.isActive())
+                        .createdAt(u.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
+    /**
+     * Kullanıcının rolünü günceller.
+     * PUT /api/auth/admin/users/{userId}/role
+     */
+    @Transactional
+    public AuthUserResponse updateUserRole(Long userId, Role newRole) {
+        AuthUser user = authUserRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("Kullanıcı bulunamadı: " + userId));
+        user.setRole(newRole);
+        authUserRepository.save(user);
+        log.info("Kullanıcı rolü güncellendi — userId: {}, yeniRol: {}", userId, newRole);
+        return AuthUserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .active(user.isActive())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * Kullanıcı hesabını devre dışı bırakır.
+     * PUT /api/auth/admin/users/{userId}/deactivate
+     */
+    @Transactional
+    public AuthUserResponse deactivateUser(Long userId) {
+        AuthUser user = authUserRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("Kullanıcı bulunamadı: " + userId));
+        user.setActive(false);
+        refreshTokenRepository.deleteAllByUserId(userId); // oturumu zorla sonlandır
+        authUserRepository.save(user);
+        log.info("Kullanıcı devre dışı bırakıldı — userId: {}", userId);
+        return AuthUserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .active(false)
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * Devre dışı bırakılmış kullanıcıyı yeniden aktive eder.
+     * PUT /api/auth/admin/users/{userId}/activate
+     */
+    @Transactional
+    public AuthUserResponse activateUser(Long userId) {
+        AuthUser user = authUserRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("Kullanıcı bulunamadı: " + userId));
+        user.setActive(true);
+        authUserRepository.save(user);
+        log.info("Kullanıcı aktive edildi — userId: {}", userId);
+        return AuthUserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .active(true)
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }
