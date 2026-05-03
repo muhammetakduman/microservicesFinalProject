@@ -11,6 +11,19 @@ import java.util.List;
 public class EventPayloads {
 
     // -------------------------------------------------------
+    // PRODUCT-SERVICE'DEN GELEN EVENTLER
+    // -------------------------------------------------------
+
+    /** Admin urunu onayladiktan sonra product-service yayinlar → stok-service stok kaydi olusturur */
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class ProductApprovedEvent {
+        private Long productId;
+        private String productName;
+        private Long sellerId;
+        private Integer quantity;
+    }
+
+    // -------------------------------------------------------
     // ORDER-SERVICE'DEN GELEN EVENTLER
     // -------------------------------------------------------
 

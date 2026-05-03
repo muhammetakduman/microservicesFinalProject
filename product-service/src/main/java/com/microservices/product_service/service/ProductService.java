@@ -5,6 +5,7 @@ import com.microservices.product_service.dto.*;
 import com.microservices.product_service.entity.Category;
 import com.microservices.product_service.entity.Product;
 import com.microservices.product_service.entity.Product.ProductStatus;
+import com.microservices.product_service.event.ProductApprovedEvent;
 import com.microservices.product_service.event.StockDecreaseEvent;
 import com.microservices.product_service.exception.CategoryNotFoundException;
 import com.microservices.product_service.exception.ProductNotFoundException;
@@ -15,6 +16,7 @@ import com.microservices.product_service.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +37,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
     private final CategoryMapper categoryMapper;
+    private final RabbitTemplate rabbitTemplate;
 
     // -------------------------
     // PUBLIC
@@ -186,8 +189,22 @@ public class ProductService {
     public ProductResponse approveProduct(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
+
         product.setStatus(ProductStatus.APPROVED);
-        return productMapper.toResponse(productRepository.save(product));
+        productRepository.save(product);
+
+        // Stok-service'e bildir — stok kaydı oluşturulsun
+        ProductApprovedEvent event = ProductApprovedEvent.builder()
+                .productId(product.getId())
+                .productName(product.getName())
+                .sellerId(product.getSellerId())
+                .quantity(product.getStock())
+                .build();
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.PRODUCT_APPROVED_ROUTING_KEY, event);
+        log.info("Urun onaylandi, ProductApprovedEvent yayinlandi – productId: {}, stok: {}",
+                product.getId(), product.getStock());
+
+        return productMapper.toResponse(product);
     }
 
     @Transactional
@@ -195,7 +212,9 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         product.setStatus(ProductStatus.REJECTED);
-        return productMapper.toResponse(productRepository.save(product));
+        productRepository.save(product);
+        log.info("Urun reddedildi – productId: {}", productId);
+        return productMapper.toResponse(product);
     }
 
     // -------------------------

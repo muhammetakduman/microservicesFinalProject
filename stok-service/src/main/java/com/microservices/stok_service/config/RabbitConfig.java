@@ -29,6 +29,10 @@ public class RabbitConfig {
     @Value("${rabbitmq.queue.stock-not-available:stock.not-available.queue}")
     private String stockNotAvailableQueue;
 
+    // Urun onay eventi
+    private static final String PRODUCT_APPROVED_QUEUE       = "product.approved.queue";
+    private static final String PRODUCT_APPROVED_ROUTING_KEY = "product.approved";
+
     @Value("${rabbitmq.routing-key.order-created:order.created}")
     private String orderCreatedRoutingKey;
 
@@ -101,6 +105,16 @@ public class RabbitConfig {
     @Bean
     public Binding stockNotAvailableBinding() {
         return BindingBuilder.bind(stockNotAvailableQueue()).to(marketplaceExchange()).with(stockNotAvailableRoutingKey);
+    }
+
+    @Bean
+    public Queue productApprovedQueue() {
+        return QueueBuilder.durable(PRODUCT_APPROVED_QUEUE).build();
+    }
+
+    @Bean
+    public Binding productApprovedBinding() {
+        return BindingBuilder.bind(productApprovedQueue()).to(marketplaceExchange()).with(PRODUCT_APPROVED_ROUTING_KEY);
     }
 
     // JSON converter

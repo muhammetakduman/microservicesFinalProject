@@ -146,6 +146,28 @@ public class StockDomainService {
         return toResponse(stock, "Stok oluşturuldu");
     }
 
+    /**
+     * ProductApprovedEvent'ten stok oluşturur — idempotent.
+     * Aynı ürün tekrar onaylanırsa yeni kayıt açmaz, Mevcut kaydı döner.
+     */
+    @Transactional
+    public void createStockIfAbsent(EventPayloads.ProductApprovedEvent event) {
+        if (productStockRepository.existsById(event.getProductId())) {
+            log.info("Stok kaydı zaten mevcut, atlanıyor – productId: {}", event.getProductId());
+            return;
+        }
+        ProductStock stock = ProductStock.builder()
+                .productId(event.getProductId())
+                .productName(event.getProductName())
+                .sellerId(event.getSellerId())
+                .availableQuantity(event.getQuantity() != null ? event.getQuantity() : 0)
+                .reservedQuantity(0)
+                .build();
+        productStockRepository.save(stock);
+        log.info("Stok kaydı oluşturuldu (ProductApproved) – productId: {}, miktar: {}",
+                event.getProductId(), stock.getAvailableQuantity());
+    }
+
     // -------------------------------------------------------
     // Yardımcı metodlar
     // -------------------------------------------------------

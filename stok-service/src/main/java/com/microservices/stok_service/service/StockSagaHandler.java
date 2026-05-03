@@ -37,5 +37,12 @@ public class StockSagaHandler {
         log.info("PaymentFailedEvent alındı – orderId: {}, sebep: {}", event.getOrderId(), event.getReason());
         stockDomainService.releaseStock(event);
     }
+
+    /** product-service → admin onayladı, stok kaydı oluştur */
+    @RabbitListener(queues = "product.approved.queue")
+    public void handleProductApproved(EventPayloads.ProductApprovedEvent event) {
+        log.info("ProductApprovedEvent alındı – productId: {}, stok: {}", event.getProductId(), event.getQuantity());
+        stockDomainService.createStockIfAbsent(event);
+    }
 }
 
