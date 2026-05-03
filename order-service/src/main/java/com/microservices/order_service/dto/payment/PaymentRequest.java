@@ -3,6 +3,7 @@ package com.microservices.order_service.dto.payment;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * payment-service'e gönderilecek ödeme isteği.
@@ -48,5 +49,20 @@ public class PaymentRequest {
 
     /** Müşterinin e-posta adresi — ödeme bildirimi için */
     private String customerEmail;
+
+    /**
+     * Sipariş kalemleri — payment-service'in PaymentSuccessEvent / PaymentFailedEvent
+     * içine kopyalaması için taşınır. stok-service commit/release işlemleri için gereklidir.
+     */
+    private List<OrderItem> items;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OrderItem {
+        private Long productId;
+        private Integer quantity;
+    }
 }
 

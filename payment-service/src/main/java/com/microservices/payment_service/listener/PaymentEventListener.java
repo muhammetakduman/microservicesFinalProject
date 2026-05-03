@@ -39,7 +39,8 @@ public class PaymentEventListener {
                 event.getExpireMonth(),
                 event.getExpireYear(),
                 event.getCvc(),
-                event.getCustomerEmail()
+                event.getCustomerEmail(),
+                event.getItems()
         );
     }
 }

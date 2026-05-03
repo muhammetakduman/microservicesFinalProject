@@ -101,6 +101,13 @@ public class OrderService {
             request.getPaymentInfo().setOrderId(order.getId());
             request.getPaymentInfo().setCustomerId(request.getCustomerId());
             request.getPaymentInfo().setCustomerEmail(request.getCustomerEmail());
+            // Items bilgisini de kaydet — payment-service commit/release için ihtiyaç duyar
+            List<com.microservices.order_service.dto.payment.PaymentRequest.OrderItem> paymentItems =
+                    order.getItems().stream()
+                            .map(i -> new com.microservices.order_service.dto.payment.PaymentRequest.OrderItem(
+                                    i.getProductId(), i.getQuantity()))
+                            .toList();
+            request.getPaymentInfo().setItems(paymentItems);
             paymentCardStore.save(order.getId(), request.getPaymentInfo());
         }
 

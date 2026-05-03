@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * iyzico ödeme servisi — SDK kullanılmıyor.
@@ -47,7 +48,8 @@ public class PaymentService {
     public PaymentResponse processPayment(Long orderId, Long customerId, BigDecimal amount,
                                           String cardNumber, String cardHolder,
                                           String expireMonth, String expireYear, String cvc,
-                                          String customerEmail) {
+                                          String customerEmail,
+                                          List<PaymentTriggeredEvent.OrderItem> items) {
 
         log.info("Ödeme başlatılıyor — orderId: {}, amount: {}, email: {}", orderId, amount, customerEmail);
 
@@ -62,6 +64,12 @@ public class PaymentService {
                         .status(PaymentStatus.PENDING).conversationId(orderId.toString())
                         .build();
         paymentRepository.save(entity);
+
+        // items → PaymentSuccessEvent/PaymentFailedEvent formatına dönüştür
+        List<PaymentSuccessEvent.OrderItem> successItems = items == null ? List.of() :
+                items.stream().map(i -> new PaymentSuccessEvent.OrderItem(i.getProductId(), i.getQuantity())).toList();
+        List<PaymentFailedEvent.OrderItem> failedItems = items == null ? List.of() :
+                items.stream().map(i -> new PaymentFailedEvent.OrderItem(i.getProductId(), i.getQuantity())).toList();
 
         try {
             IyzicoPaymentResult result = iyzicoHttpClient.createPayment(
@@ -79,6 +87,7 @@ public class PaymentService {
                                 .orderId(orderId).customerId(customerId)
                                 .amount(amount).transactionId(result.paymentId())
                                 .customerEmail(customerEmail)
+                                .items(successItems)
                                 .build());
 
                 sendPaymentSuccessMail(customerEmail, orderId, amount);
@@ -93,6 +102,7 @@ public class PaymentService {
                         PaymentFailedEvent.builder()
                                 .orderId(orderId).customerId(customerId)
                                 .reason(result.errorMessage()).customerEmail(customerEmail)
+                                .items(failedItems)
                                 .build());
 
                 sendPaymentFailedMail(customerEmail, orderId, result.errorMessage());
@@ -108,6 +118,7 @@ public class PaymentService {
                     PaymentFailedEvent.builder()
                             .orderId(orderId).customerId(customerId)
                             .reason("Sunucu hatası").customerEmail(customerEmail)
+                            .items(failedItems)
                             .build());
 
             sendPaymentFailedMail(customerEmail, orderId, "Teknik bir hata oluştu, lütfen tekrar deneyin.");

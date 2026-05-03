@@ -13,37 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
-/**
- * SAGA Olay Dinleyicisi.
- *
- * Bu class, Saga Choreography Pattern'ın order-service ayağıdır.
- *
- * SAGA AKIŞI:
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  1. Müşteri sipariş verir                                       │
- * │     OrderService → [order.created.queue] → stok-service         │
- * │                                                                  │
- * │  2a. Stok yeterliyse:                                           │
- * │     stok-service → [stock.reserved.queue] → OrderSagaListener  │
- * │     → Order durumu: STOCK_RESERVED                              │
- * │     → PaymentCardStore'dan kart bilgisi alınır                  │
- * │     → [payment.triggered.queue] → payment-service              │
- * │                                                                  │
- * │  2b. Stok yetersizse:                                           │
- * │     stok-service → [stock.not-available.queue] → OrderSagaList  │
- * │     → Order durumu: FAILED                                      │
- * │     → PaymentCardStore temizlenir                               │
- * │                                                                  │
- * │  3a. Ödeme başarılıysa:                                         │
- * │     payment-service → [payment.success.queue] → OrderSagaList   │
- * │     → Order durumu: CONFIRMED                                   │
- * │                                                                  │
- * │  3b. Ödeme başarısızsa:                                         │
- * │     payment-service → [payment.failed.queue] → OrderSagaList    │
- * │     → Order durumu: FAILED                                      │
- * │     → stok-service otomatik serbest bırakır                    │
- * └─────────────────────────────────────────────────────────────────┘
- */
+
 @Component
 @RequiredArgsConstructor
 @Slf4j

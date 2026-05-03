@@ -3,6 +3,7 @@ package com.microservices.payment_service.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * order-service'in RabbitMQ'ya publish ettiği ödeme tetikleme eventi.
@@ -24,5 +25,19 @@ public class PaymentTriggeredEvent {
     private String expireMonth;
     private String expireYear;
     private String cvc;
+    /**
+     * Sipariş kalemleri — stok-service commit/release işlemleri için
+     * PaymentSuccessEvent / PaymentFailedEvent'e aktarılır.
+     */
+    private List<OrderItem> items;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OrderItem {
+        private Long productId;
+        private Integer quantity;
+    }
 }
 
