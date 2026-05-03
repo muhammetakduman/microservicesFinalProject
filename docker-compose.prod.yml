@@ -1,0 +1,333 @@
+networks:
+  marketplace-network:
+    driver: bridge
+
+volumes:
+  auth-postgres-data:
+  user-postgres-data:
+  product-postgres-data:
+  cart-postgres-data:
+  order-postgres-data:
+  payment-postgres-data:
+  notification-postgres-data:
+  stock-postgres-data:
+  rabbitmq-data:
+
+services:
+  # ================================
+  # Infrastructure
+  # ================================
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+    ports:
+      # Sadece management panel (opsiyonel). 5672 dışarı açılmıyor.
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - marketplace-network
+
+  discovery-server:
+    build:
+      context: ./discovery-server
+    restart: unless-stopped
+    environment:
+      # discovery-server kendi içinde bu değerleri kullanır
+      EUREKA_URI: http://discovery-server:8761/eureka
+      EUREKA_HOSTNAME: discovery-server
+    networks:
+      - marketplace-network
+
+  config-server:
+    build:
+      context: ./config-server
+    restart: unless-stopped
+    environment:
+      EUREKA_URI: http://discovery-server:8761/eureka
+    depends_on:
+      - discovery-server
+    networks:
+      - marketplace-network
+
+  # ================================
+  # PostgreSQL (her servis için ayrı)
+  # Production: dışarı port açılmaz
+  # ================================
+
+  auth-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  user-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:?USER_DB_PASSWORD is required}
+      POSTGRES_DB: user_db
+    volumes:
+      - user-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  product-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD:?PRODUCT_DB_PASSWORD is required}
+      POSTGRES_DB: product_db
+    volumes:
+      - product-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  cart-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${CART_DB_PASSWORD:?CART_DB_PASSWORD is required}
+      POSTGRES_DB: cart_db
+    volumes:
+      - cart-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  order-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:?ORDER_DB_PASSWORD is required}
+      POSTGRES_DB: order_db
+    volumes:
+      - order-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  payment-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD is required}
+      POSTGRES_DB: payment_db
+    volumes:
+      - payment-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  notification-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD is required}
+      POSTGRES_DB: notification_db
+    volumes:
+      - notification-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  stock-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${STOCK_DB_PASSWORD:?STOCK_DB_PASSWORD is required}
+      POSTGRES_DB: stock_db
+    volumes:
+      - stock-postgres-data:/var/lib/postgresql/data
+    networks:
+      - marketplace-network
+
+  # ================================
+  # Backend Services
+  # ================================
+
+  auth-service:
+    build:
+      context: ./auth-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}
+    depends_on:
+      - config-server
+      - auth-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  user-service:
+    build:
+      context: ./user-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?USER_DB_PASSWORD is required}
+    depends_on:
+      - config-server
+      - user-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  product-service:
+    build:
+      context: ./product-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      PRODUCT_DB_PASSWORD: ${PRODUCT_DB_PASSWORD:?PRODUCT_DB_PASSWORD is required}
+    depends_on:
+      - config-server
+      - product-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  cart-service:
+    build:
+      context: ./shopping-cart-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      CART_DB_PASSWORD: ${CART_DB_PASSWORD:?CART_DB_PASSWORD is required}
+    depends_on:
+      - config-server
+      - cart-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  stock-service:
+    build:
+      context: ./stok-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      STOCK_DB_PASSWORD: ${STOCK_DB_PASSWORD:?STOCK_DB_PASSWORD is required}
+    depends_on:
+      - config-server
+      - stock-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  order-service:
+    build:
+      context: ./order-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?ORDER_DB_PASSWORD is required}
+    depends_on:
+      - config-server
+      - order-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  payment-service:
+    build:
+      context: ./payment-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD is required}
+      IYZICO_API_KEY: ${IYZICO_API_KEY:?IYZICO_API_KEY is required}
+      IYZICO_SECRET_KEY: ${IYZICO_SECRET_KEY:?IYZICO_SECRET_KEY is required}
+      IYZICO_BASE_URL: ${IYZICO_BASE_URL:-https://sandbox-api.iyzipay.com}
+    depends_on:
+      - config-server
+      - payment-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  mail-service:
+    build:
+      context: ./mail-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      RABBITMQ_USER: ${RABBITMQ_USER:-marketplace_admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD is required}
+      MAIL_USERNAME: ${MAIL_USERNAME:?MAIL_USERNAME is required}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:?MAIL_PASSWORD is required}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Safory Ecommerce}
+    depends_on:
+      - config-server
+      - notification-postgres
+      - rabbitmq
+    networks:
+      - marketplace-network
+
+  # ================================
+  # API Gateway (tek dışa açık servis)
+  # ================================
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CONFIG_URI: http://config-server:8888
+      EUREKA_URI: http://discovery-server:8761/eureka
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      - config-server
+    networks:
+      - marketplace-network
+
+

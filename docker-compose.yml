@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+
+  # ================================
+  # PostgreSQL - Her servis icin ayri DB
+  # ================================
+
+  auth-postgres:
+    image: postgres:15
+    container_name: auth-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+    ports:
+      - "5441:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - auth-postgres-data:/var/lib/postgresql/data
+
+  user-postgres:
+    image: postgres:15
+    container_name: user-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user_db
+    ports:
+      - "5433:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - user-postgres-data:/var/lib/postgresql/data
+
+  seller-postgres:
+    image: postgres:15
+    container_name: seller-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: seller_db
+    ports:
+      - "5434:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - seller-postgres-data:/var/lib/postgresql/data
+
+  product-postgres:
+    image: postgres:15
+    container_name: product-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: product_db
+    ports:
+      - "5435:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - product-postgres-data:/var/lib/postgresql/data
+
+  cart-postgres:
+    image: postgres:15
+    container_name: cart-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cart_db
+    ports:
+      - "5436:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - cart-postgres-data:/var/lib/postgresql/data
+
+  order-postgres:
+    image: postgres:15
+    container_name: order-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: order_db
+    ports:
+      - "5437:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - order-postgres-data:/var/lib/postgresql/data
+
+  payment-postgres:
+    image: postgres:15
+    container_name: payment-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payment_db
+    ports:
+      - "5438:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - payment-postgres-data:/var/lib/postgresql/data
+
+  notification-postgres:
+    image: postgres:15
+    container_name: notification-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notification_db
+    ports:
+      - "5439:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - notification-postgres-data:/var/lib/postgresql/data
+
+  stock-postgres:
+    image: postgres:15
+    container_name: stock-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stock_db
+    ports:
+      - "5440:5432"
+    networks:
+      - marketplace-network
+    volumes:
+      - stock-postgres-data:/var/lib/postgresql/data
+
+  # ================================
+  # RabbitMQ
+  # ================================
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - marketplace-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+# ================================
+# Networks
+# ================================
+networks:
+  marketplace-network:
+    driver: bridge
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  auth-postgres-data:
+  user-postgres-data:
+  seller-postgres-data:
+  product-postgres-data:
+  cart-postgres-data:
+  order-postgres-data:
+  payment-postgres-data:
+  notification-postgres-data:
+  stock-postgres-data:
+  rabbitmq-data:

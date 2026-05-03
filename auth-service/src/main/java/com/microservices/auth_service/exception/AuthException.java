@@ -1,0 +1,15 @@
+package com.microservices.auth_service.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+/**
+ * Genel auth hatası — login başarısız, token geçersiz vb.
+ */
+@ResponseStatus(HttpStatus.UNAUTHORIZED)
+public class AuthException extends RuntimeException {
+    public AuthException(String message) {
+        super(message);
+    }
+}
+
