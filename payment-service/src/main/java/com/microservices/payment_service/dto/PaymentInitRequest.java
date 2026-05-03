@@ -3,6 +3,7 @@ package com.microservices.payment_service.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * POST /api/payments/init — REST yoluyla manuel ödeme başlatma.
@@ -24,5 +25,9 @@ public class PaymentInitRequest {
     private String cvc;
     /** Mail bildirimi için müşteri e-posta adresi */
     private String customerEmail;
+    /**
+     * Sipariş kalemleri — stok commit/release için SAGA eventlerine aktarılır.
+     * Stok takibi yapılmıyorsa null veya boş gönderilebilir.
+     */
+    private List<PaymentTriggeredEvent.OrderItem> items;
 }
-

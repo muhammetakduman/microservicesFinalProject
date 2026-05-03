@@ -56,7 +56,8 @@ public class PaymentController {
                 request.getExpireMonth(),
                 request.getExpireYear(),
                 request.getCvc(),
-                request.getCustomerEmail()
+                request.getCustomerEmail(),
+                request.getItems()
         );
         return ResponseEntity.ok(response);
     }
