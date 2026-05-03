@@ -43,6 +43,3 @@ Thumbs.db
 *.log
 logs/
 
-# Dokumantasyon klasoru repoya gonderilmeyecek
-/docs/
-

@@ -57,7 +57,9 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
             "http://localhost:5173",   // Vite
             "http://localhost:3000",   // CRA / Next.js
-            "http://localhost:4200"    // Angular (ileride lazım olursa)
+            "http://localhost:4200",
+                "https://app.saforygroup.com",
+                "https://saforygroup.com"
         ));
 
         // İzin verilen HTTP method'ları
